@@ -73,6 +73,13 @@ class AvgPrice(Base):
     martlock_week: Mapped[Optional[int]] = mapped_column(BigInteger)
     martlock_month: Mapped[Optional[int]] = mapped_column(BigInteger)
     
+    black_market_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    caerleon_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    lymhurst_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    bridgewatch_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    fort_sterling_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    thetford_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    martlock_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     item_data = relationship("Item", back_populates="avg_price_data")

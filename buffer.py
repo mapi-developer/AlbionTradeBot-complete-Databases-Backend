@@ -24,6 +24,7 @@ class PriceUpdateBuffer:
                 
                 self._buffer[name].update(data)
 
+    #
     async def flush(self, db: AsyncSession):
         async with self._lock:
             if not self._buffer:
@@ -37,18 +38,27 @@ class PriceUpdateBuffer:
             for unique_name, fields in items_to_update.items():
                 fields["updated_at"] = datetime.now(timezone.utc)
                 
+                # 1. Try to UPDATE the existing item
                 stmt = (
                     update(models.Item)
                     .where(models.Item.unique_name == unique_name)
                     .values(**fields)
                 )
-                await db.execute(stmt)
+                result = await db.execute(stmt)
+
+                # 2. If rowcount is 0, the item doesn't exist -> INSERT it
+                if result.rowcount == 0:
+                    new_item = models.Item(unique_name=unique_name, **fields)
+                    db.add(new_item)
+                
                 count += 1
             
             await db.commit()
             return count
+
         except Exception as e:
             print(f"Error flushing buffer: {e}")
+            await db.rollback() # Important: Rollback if something breaks
             return 0
 
 price_buffer = PriceUpdateBuffer()

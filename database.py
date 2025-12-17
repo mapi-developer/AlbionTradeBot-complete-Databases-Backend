@@ -6,6 +6,8 @@ from sqlalchemy.orm import DeclarativeBase
 db_user = os.getenv("DB_USER", "postgres")
 db_pass = os.getenv("DB_PASSWORD", "password") # This comes from your Secret
 db_host = os.getenv("INSTANCE_CONNECTION_NAME", "localhost") 
+NOWPAYMENTS_API_KEY = os.getenv("NOWPAYMENTS_API_KEY")
+NOWPAYMENTS_IPN_SECRET = os.getenv("NOWPAYMENTS_IPN_SECRET")
 
 # DB Names
 trade_db_name = os.getenv("DB_NAME_TRADE", "trade_bot_db")

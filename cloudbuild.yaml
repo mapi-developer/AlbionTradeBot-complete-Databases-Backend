@@ -65,7 +65,9 @@ steps:
       
       # 2. Inject the Secret from Secret Manager
       - '--set-secrets'
-      - 'DB_PASSWORD=DB_PASSWORD:latest'
+      - 'DB_PASSWORD=DB_PASSWORD:latest,'
+      - 'NOWPAYMENTS_API_KEY=NOWPAYMENTS_API_KEY:latest,'
+      - 'NOWPAYMENTS_IPN_SECRET=NOWPAYMENTS_IPN_SECRET:latest'
 
       # 3. Set other non-secret Env Vars
       - '--set-env-vars'

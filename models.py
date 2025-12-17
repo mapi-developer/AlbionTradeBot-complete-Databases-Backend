@@ -110,7 +110,6 @@ class Invoice(Base):
     __tablename__ = "Invoice"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("User.id"), index=True)
     
     status: Mapped[str] = mapped_column(String)
@@ -120,3 +119,21 @@ class Invoice(Base):
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="invoices")
+
+
+class Payment(Base):
+    __tablename__ = "Payment"
+
+    # ID from NOWPayments
+    payment_id: Mapped[int] = mapped_column(Integer, primary_key=True) 
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("User.id"), index=True)
+    
+    status: Mapped[str] = mapped_column(String) # waiting, finished, failed
+    price_amount: Mapped[float] = mapped_column(Float)
+    pay_currency: Mapped[Optional[str]] = mapped_column(String)
+    
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User")

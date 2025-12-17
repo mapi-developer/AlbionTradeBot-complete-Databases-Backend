@@ -70,3 +70,9 @@ class InvoiceCreate(BaseModel):
     amount: float
     currency: str = "USD"
     subscription_plan: str = "1_month"
+
+class PaymentRequest(BaseModel):
+    plan_id: str  # e.g., "1_month"
+
+class PaymentResponse(BaseModel):
+    invoice_url: str

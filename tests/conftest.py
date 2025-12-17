@@ -1,7 +1,7 @@
 import sys
 import os
 
-# 1. Add project root to path so we can import 'models' and 'main'
+# Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
@@ -20,8 +20,7 @@ TEST_TRADE_DB_URL = "sqlite+aiosqlite:///:memory:"
 TEST_CRYPTO_DB_URL = "sqlite+aiosqlite:///:memory:"
 
 # --- GLOBAL ENGINES ---
-# We keep these global so they persist for the session, 
-# but we MUST access them via fixtures in tests to avoid import issues.
+# We define these globally so they persist, but we will ONLY access them via fixtures
 _test_trade_engine = create_async_engine(
     TEST_TRADE_DB_URL, 
     connect_args={"check_same_thread": False}, 
@@ -43,7 +42,7 @@ TestingCryptoSession = async_sessionmaker(_test_crypto_engine, expire_on_commit=
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def setup_databases():
-    """Reset databases before every test."""
+    """Creates tables on the global engines before every test."""
     async with _test_trade_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     async with _test_crypto_engine.begin() as conn:
@@ -56,17 +55,16 @@ async def setup_databases():
     async with _test_crypto_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
-# --- EXPOSE ENGINES AS FIXTURES ---
+# --- NEW: Fixtures to access engines safely ---
 @pytest.fixture
 def trade_db_engine():
-    """Passes the correct engine instance to tests."""
     return _test_trade_engine
 
 @pytest.fixture
 def crypto_db_engine():
     return _test_crypto_engine
 
-# --- OVERRIDES ---
+# --- DEPENDENCY OVERRIDES ---
 async def override_get_trade_db():
     async with TestingTradeSession() as session:
         yield session

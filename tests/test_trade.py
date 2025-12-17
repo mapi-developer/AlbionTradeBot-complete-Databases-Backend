@@ -2,13 +2,14 @@ import pytest
 from sqlalchemy import text
 from main import price_buffer
 
-# PASS 'trade_db_engine' AS AN ARGUMENT
+# REMOVED: from tests.conftest import test_trade_engine
+
 @pytest.mark.asyncio
 async def test_update_price_flow(client, trade_db_engine):
     """
     Test the full flow: User pushes update -> Buffer -> Scheduler flushes -> DB updated.
     """
-    # 1. SEED DATA using the injected engine fixture
+    # 1. SEED DATA using the fixture
     async with trade_db_engine.begin() as conn:
         await conn.execute(text("INSERT OR IGNORE INTO Item (unique_name) VALUES ('T4_SWORD')"))
 
@@ -35,7 +36,6 @@ async def test_update_price_flow(client, trade_db_engine):
     assert item["unique_name"] == "T4_SWORD"
     assert item["price_caerleon"] == 1000
 
-# PASS 'trade_db_engine' AS AN ARGUMENT
 @pytest.mark.asyncio
 async def test_buffer_merging(client, trade_db_engine):
     # 1. SEED DATA
@@ -50,7 +50,7 @@ async def test_buffer_merging(client, trade_db_engine):
         "price_caerleon": 500
     }])
 
-    # User 2 sends Martlock price (same item)
+    # User 2 sends Martlock price
     await client.put("/items/prices", json=[{
         "unique_name": "T4_SHIELD",
         "price_martlock": 600

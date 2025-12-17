@@ -2,7 +2,7 @@ steps:
   # =====================================================
   # STEP 1: TEST
   # =====================================================
-  - name: 'python:3.11-slim'
+  - name: 'python:3.13-slim'
     id: 'run-tests'
     entrypoint: 'bash'
     args:

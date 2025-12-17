@@ -115,7 +115,7 @@ class Invoice(Base):
     
     status: Mapped[str] = mapped_column(String)
     subscription_plan: Mapped[str] = mapped_column(String)
-    amount: Mapped[str] = mapped_column(Float)
+    amount: Mapped[float] = mapped_column(Float)
     currency: Mapped[str] = mapped_column(String)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

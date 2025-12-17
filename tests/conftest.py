@@ -1,8 +1,7 @@
 import sys
 import os
 
-# --- 1. CRITICAL FIX: Add project root to sys.path ---
-# This allows imports like 'import models' to work from inside the tests/ folder
+# 1. Add project root to path so we can import 'models' and 'main'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
@@ -11,7 +10,6 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool 
 
-# 2. Imports now work because of sys.path above
 import models 
 from database import Base 
 from main import app
@@ -21,37 +19,54 @@ from dependencies import get_trade_db, get_crypto_db
 TEST_TRADE_DB_URL = "sqlite+aiosqlite:///:memory:"
 TEST_CRYPTO_DB_URL = "sqlite+aiosqlite:///:memory:"
 
-# --- ENGINES ---
-test_trade_engine = create_async_engine(
+# --- GLOBAL ENGINES ---
+# We keep these global so they persist for the session, 
+# but we MUST access them via fixtures in tests to avoid import issues.
+_test_trade_engine = create_async_engine(
     TEST_TRADE_DB_URL, 
     connect_args={"check_same_thread": False}, 
     poolclass=StaticPool, 
     echo=False
 )
 
-test_crypto_engine = create_async_engine(
+_test_crypto_engine = create_async_engine(
     TEST_CRYPTO_DB_URL, 
     connect_args={"check_same_thread": False}, 
     poolclass=StaticPool, 
     echo=False
 )
 
-TestingTradeSession = async_sessionmaker(test_trade_engine, expire_on_commit=False)
-TestingCryptoSession = async_sessionmaker(test_crypto_engine, expire_on_commit=False)
+TestingTradeSession = async_sessionmaker(_test_trade_engine, expire_on_commit=False)
+TestingCryptoSession = async_sessionmaker(_test_crypto_engine, expire_on_commit=False)
 
 # --- FIXTURES ---
+
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def setup_databases():
-    async with test_trade_engine.begin() as conn:
+    """Reset databases before every test."""
+    async with _test_trade_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    async with test_crypto_engine.begin() as conn:
+    async with _test_crypto_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
     yield
-    async with test_trade_engine.begin() as conn:
+    
+    async with _test_trade_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    async with test_crypto_engine.begin() as conn:
+    async with _test_crypto_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
+# --- EXPOSE ENGINES AS FIXTURES ---
+@pytest.fixture
+def trade_db_engine():
+    """Passes the correct engine instance to tests."""
+    return _test_trade_engine
+
+@pytest.fixture
+def crypto_db_engine():
+    return _test_crypto_engine
+
+# --- OVERRIDES ---
 async def override_get_trade_db():
     async with TestingTradeSession() as session:
         yield session

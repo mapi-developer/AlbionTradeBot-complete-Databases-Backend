@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -7,8 +8,30 @@ from datetime import datetime, timedelta, timezone
 import models, dependencies
 from schemas import *
 from buffer import price_buffer
+from database import trade_bot_engine, crypto_backend_engine
 
-app = FastAPI(title="Trade Bot & Crypto Backend")
+# --- LIFESPAN (Startup & Shutdown) ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 1. Startup: Create Tables
+    print("Startup: Creating database tables...")
+    async with trade_bot_engine.begin() as conn:
+        await conn.run_sync(models.Base.metadata.create_all)
+        
+    async with crypto_backend_engine.begin() as conn:
+        await conn.run_sync(models.Base.metadata.create_all)
+    print("Startup: Tables created successfully.")
+    
+    yield  # Application runs while the context is yielded
+    
+    # 2. Shutdown: Dispose Engines (Clean up connections)
+    print("Shutdown: Closing database connections...")
+    await trade_bot_engine.dispose()
+    await crypto_backend_engine.dispose()
+
+# --- APP INITIALIZATION ---
+# Pass the lifespan handler here instead of using on_event
+app = FastAPI(title="Trade Bot & Crypto Backend", lifespan=lifespan)
 
 # ==========================================
 # HELPER FUNCTIONS

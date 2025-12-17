@@ -37,7 +37,8 @@ steps:
     id: 'push-image'
     args: [
       'push', 
-      '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME'
+      # FIX: Explicitly push the specific SHA version required by the Deploy step
+      '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
     ]
 
   # =====================================================
@@ -87,9 +88,10 @@ substitutions:
   
   # Your Specific DB Details
   _DB_INSTANCE_CONNECTION_NAME: 'albiontradebot-backend:europe-west4:albion-trade-bot-db'
-  _DB_USER: 'postgres'  # Default user, change if you created a different one
+  _DB_USER: 'postgres' 
 
 options:
   logging: CLOUD_LOGGING_ONLY
 images:
+  # This automatically pushes the 'latest' tag at the end of a successful build
   - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:latest'

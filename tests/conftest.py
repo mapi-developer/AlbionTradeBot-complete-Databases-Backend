@@ -55,7 +55,6 @@ async def setup_databases():
     async with _test_crypto_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
-# --- NEW: Fixtures to access engines safely ---
 @pytest.fixture
 def trade_db_engine():
     return _test_trade_engine
@@ -63,6 +62,14 @@ def trade_db_engine():
 @pytest.fixture
 def crypto_db_engine():
     return _test_crypto_engine
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def shutdown_engines():
+    """Ensures DB engines are disposed of after all tests run."""
+    yield
+    # Explicitly close the global engines to prevent the process from hanging
+    await _test_trade_engine.dispose()
+    await _test_crypto_engine.dispose()
 
 # --- DEPENDENCY OVERRIDES ---
 async def override_get_trade_db():

@@ -1,19 +1,32 @@
+import os
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-import os
 
-# --- Configuration ---
-TRADE_BOT_DB_URL = os.getenv("TRADE_BOT_DB_URL", "postgresql+asyncpg://user:pass@localhost/trade_bot_db")
-CRYPTO_BACKEND_DB_URL = os.getenv("CRYPTO_BACKEND_DB_URL", "postgresql+asyncpg://user:pass@localhost/crypto_backend_db")
+# Retrieve individual components from Environment Variables
+db_user = os.getenv("DB_USER", "postgres")
+db_pass = os.getenv("DB_PASSWORD", "password") # This comes from your Secret
+db_host = os.getenv("INSTANCE_CONNECTION_NAME", "localhost") 
 
-# --- Engines ---
-trade_bot_engine = create_async_engine(TRADE_BOT_DB_URL, echo=False)
-crypto_backend_engine = create_async_engine(CRYPTO_BACKEND_DB_URL, echo=False)
+# DB Names
+trade_db_name = os.getenv("DB_NAME_TRADE", "trade_bot_db")
+crypto_db_name = os.getenv("DB_NAME_CRYPTO", "crypto_backend_db")
 
-# --- Sessions ---
+# Function to build URL
+def get_db_url(db_name):
+    if os.getenv("K_SERVICE"): # Check if running on Cloud Run
+        # Use Unix Socket for Cloud Run
+        return f"postgresql+asyncpg://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{db_host}"
+    else:
+        # Use Localhost for local testing
+        return f"postgresql+asyncpg://{db_user}:{db_pass}@localhost/{db_name}"
+
+# Create Engines
+trade_bot_engine = create_async_engine(get_db_url(trade_db_name), echo=False)
+crypto_backend_engine = create_async_engine(get_db_url(crypto_db_name), echo=False)
+
+# Create Sessions
 TradeBotSession = async_sessionmaker(trade_bot_engine, expire_on_commit=False)
 CryptoBackendSession = async_sessionmaker(crypto_backend_engine, expire_on_commit=False)
 
-# --- Base Model ---
 class Base(DeclarativeBase):
     pass

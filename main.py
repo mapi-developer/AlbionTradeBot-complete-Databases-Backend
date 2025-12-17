@@ -4,9 +4,9 @@ from sqlalchemy import select, update
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 
-from . import models, dependencies
-from .schemas import *
-from .buffer import price_buffer
+import models, dependencies
+from schemas import *
+from buffer import price_buffer
 
 app = FastAPI(title="Trade Bot & Crypto Backend")
 

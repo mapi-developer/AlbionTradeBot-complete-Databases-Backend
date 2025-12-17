@@ -3,7 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from typing import Optional, List
 from datetime import datetime
-from .database import Base
+from database import Base
 
 # ==========================================
 # DATABASE 1: Trade Bot (Items & Prices)
@@ -109,7 +109,7 @@ class User(Base):
 class Invoice(Base):
     __tablename__ = "Invoice"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("User.id"), index=True)
     

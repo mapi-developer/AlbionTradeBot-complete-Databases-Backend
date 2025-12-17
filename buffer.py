@@ -3,7 +3,7 @@ from typing import Dict, Any
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
-from . import models
+import models
 
 class PriceUpdateBuffer:
     def __init__(self):
@@ -13,7 +13,7 @@ class PriceUpdateBuffer:
     async def add_updates(self, updates: list):
         async with self._lock:
             for item in updates:
-                data = item.dict(exclude_unset=True)
+                data = item.model_dump(exclude_unset=True)
                 name = data.pop("unique_name")
 
                 if not data:

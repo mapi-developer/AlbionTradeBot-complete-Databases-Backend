@@ -16,13 +16,14 @@ class Item(Base):
     unique_name: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     
     # Prices (using BigInteger for 'bigint')
-    price_black_market: Mapped[Optional[int]] = mapped_column(BigInteger)
-    price_caerleon: Mapped[Optional[int]] = mapped_column(BigInteger)
-    price_lymhurst: Mapped[Optional[int]] = mapped_column(BigInteger)
-    price_bridgewatch: Mapped[Optional[int]] = mapped_column(BigInteger)
-    price_fort_sterling: Mapped[Optional[int]] = mapped_column(BigInteger)
-    price_thetford: Mapped[Optional[int]] = mapped_column(BigInteger)
-    price_martlock: Mapped[Optional[int]] = mapped_column(BigInteger)
+    price_black_market: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    price_caerleon: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    price_lymhurst: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    price_bridgewatch: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    price_fort_sterling: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    price_thetford: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    price_martlock: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    price_brecilien: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
 
     # Timestamps
     black_market_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -32,6 +33,7 @@ class Item(Base):
     fort_sterling_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     thetford_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     martlock_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    brecilien_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -45,33 +47,37 @@ class AvgPrice(Base):
     unique_name: Mapped[str] = mapped_column(String, ForeignKey("Item.unique_name"), primary_key=True)
     
     # Day/Week/Month stats
-    black_market_day: Mapped[Optional[int]] = mapped_column(BigInteger)
-    black_market_week: Mapped[Optional[int]] = mapped_column(BigInteger)
-    black_market_month: Mapped[Optional[int]] = mapped_column(BigInteger)
+    black_market_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    black_market_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    black_market_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
     
-    caerleon_day: Mapped[Optional[int]] = mapped_column(BigInteger)
-    caerleon_week: Mapped[Optional[int]] = mapped_column(BigInteger)
-    caerleon_month: Mapped[Optional[int]] = mapped_column(BigInteger)
+    caerleon_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    caerleon_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    caerleon_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
 
-    lymhurst_day: Mapped[Optional[int]] = mapped_column(BigInteger)
-    lymhurst_week: Mapped[Optional[int]] = mapped_column(BigInteger)
-    lymhurst_month: Mapped[Optional[int]] = mapped_column(BigInteger)
+    lymhurst_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    lymhurst_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    lymhurst_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
 
-    bridgewatch_day: Mapped[Optional[int]] = mapped_column(BigInteger)
-    bridgewatch_week: Mapped[Optional[int]] = mapped_column(BigInteger)
-    bridgewatch_month: Mapped[Optional[int]] = mapped_column(BigInteger)
+    bridgewatch_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    bridgewatch_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    bridgewatch_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
 
-    fort_sterling_day: Mapped[Optional[int]] = mapped_column(BigInteger)
-    fort_sterling_week: Mapped[Optional[int]] = mapped_column(BigInteger)
-    fort_sterling_month: Mapped[Optional[int]] = mapped_column(BigInteger)
+    fort_sterling_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    fort_sterling_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    fort_sterling_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
 
-    thetford_day: Mapped[Optional[int]] = mapped_column(BigInteger)
-    thetford_week: Mapped[Optional[int]] = mapped_column(BigInteger)
-    thetford_month: Mapped[Optional[int]] = mapped_column(BigInteger)
+    thetford_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    thetford_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    thetford_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
 
-    martlock_day: Mapped[Optional[int]] = mapped_column(BigInteger)
-    martlock_week: Mapped[Optional[int]] = mapped_column(BigInteger)
-    martlock_month: Mapped[Optional[int]] = mapped_column(BigInteger)
+    martlock_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    martlock_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    martlock_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+
+    brecilien_day: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    brecilien_week: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+    brecilien_month: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
     
     black_market_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     caerleon_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -80,6 +86,7 @@ class AvgPrice(Base):
     fort_sterling_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     thetford_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     martlock_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    brecilien_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     item_data = relationship("Item", back_populates="avg_price_data")

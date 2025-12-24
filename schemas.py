@@ -12,6 +12,7 @@ class ItemPriceUpdate(BaseModel):
     price_fort_sterling: Optional[int] = None
     price_thetford: Optional[int] = None
     price_martlock: Optional[int] = None
+    price_brecilien: Optional[int] = None
 
 class HistoryUpdate(BaseModel):
     unique_name: str
@@ -37,6 +38,9 @@ class HistoryUpdate(BaseModel):
     martlock_day: Optional[int] = None
     martlock_week: Optional[int] = None
     martlock_month: Optional[int] = None
+    brecilien_day: Optional[int] = None
+    brecilien_week: Optional[int] = None
+    brecilien_month: Optional[int] = None
 
 # --- User Schemas ---
 class UserCreate(BaseModel):

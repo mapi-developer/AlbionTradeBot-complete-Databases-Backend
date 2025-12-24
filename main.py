@@ -13,13 +13,13 @@ from database import trade_bot_engine, crypto_backend_engine
 # --- LIFESPAN (Startup & Shutdown) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # REMOVED: Table creation logic here. 
-    # It is now handled by reset_db.py during the Cloud Build step.
+    # REMOVE the create_all logic here!
+    # It is already handled by reset_db.py in the Cloud Build step.
     print("Startup: Service is starting...")
     
     yield  # Application runs
     
-    # 2. Shutdown: Dispose Engines
+    # Shutdown: Dispose Engines
     print("Shutdown: Closing database connections...")
     await trade_bot_engine.dispose()
     await crypto_backend_engine.dispose()

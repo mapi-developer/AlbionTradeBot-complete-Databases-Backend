@@ -51,19 +51,15 @@ steps:
     args:
       - '-c'
       - |
-        # Wait for the sidecar proxy to be ready
         echo "Waiting for Cloud SQL Proxy..."
         sleep 5
-        
-        # Define connection URL (connecting to localhost because of the sidecar)
         export DATABASE_URL="postgresql+asyncpg://$_DB_USER:$$DB_PASSWORD@127.0.0.1:5432/trade_bot_db"
         
-        echo "Running migrations..."
-        # If you want to WIPE the database first (as requested), run a reset script here:
-        # python3 reset_db.py 
+        echo "Wiping and recreating tables..."
+        python3 reset_db.py   # <--- UNCOMMENT THIS LINE
         
+        echo "Running migrations..."
         python3 -m alembic upgrade head
-    # This runs the proxy alongside your migration container
     services:
       - name: 'gcr.io/cloudsql-docker/gce-proxy:latest'
         args:

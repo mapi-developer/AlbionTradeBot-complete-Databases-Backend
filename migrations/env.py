@@ -26,7 +26,7 @@ def run_migrations_online() -> None:
     configuration["sqlalchemy.url"] = url
 
     connectable = engine_from_config(
-        configuratio
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

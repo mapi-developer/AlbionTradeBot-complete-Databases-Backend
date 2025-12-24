@@ -28,6 +28,11 @@ async def lifespan(app: FastAPI):
 # Pass the lifespan handler here instead of using on_event
 app = FastAPI(title="Trade Bot & Crypto Backend", lifespan=lifespan)
 
+# Add this to main.py
+@app.get("/", tags=["System"])
+async def health_check():
+    return {"status": "alive", "service": "Albion Trade Bot Backend"}
+
 # ==========================================
 # HELPER FUNCTIONS
 # ==========================================
@@ -271,3 +276,4 @@ async def get_last_invoices(
     )
     result = await db.execute(stmt)
     return result.scalars().all()
+

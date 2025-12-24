@@ -46,26 +46,28 @@ steps:
   # =====================================================
   - name: '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
     id: 'run-migrations'
-    entrypoint: 'bash'
-    secretEnv: ['DB_PASSWORD'] # Fetch password from Secret Manager
+    entrypoint: 'sh'
+    # This allows this step to talk to the Cloud SQL Proxy container
+    networkInterfaces:
+      - network: 'default'
+    secretEnv: ['DB_PASSWORD']
     args:
       - '-c'
       - |
-        # 1. Start Cloud SQL Proxy in the background
-        # Note: we use 0.0.0.0 so the container can talk to itself
-        wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy
-        chmod +x cloud_sql_proxy
-        ./cloud_sql_proxy -instances=$_DB_INSTANCE_CONNECTION_NAME=tcp:5432 & 
-        
-        # 2. Give the proxy a moment to start
-        sleep 3
-        
-        # 3. Construct the DB URL and run Alembic
-        # Adjust the URL format to match your SQLAlchemy configuration
+        # Use 'python -m alembic' to ensure the installed package is found
         export DATABASE_URL="postgresql+asyncpg://$_DB_USER:$$DB_PASSWORD@127.0.0.1:5432/trade_bot_db"
         
+        echo "Waiting for sidecar proxy..."
+        sleep 5
+        
         echo "Running Alembic migrations..."
-        alembic upgrade head
+        python3 -m alembic upgrade head
+    # This runs the proxy as a "sidecar" container in this specific step
+    services:
+      - name: 'gcr.io/cloudsql-docker/gce-proxy:latest'
+        args:
+          - '/cloud_sql_proxy'
+          - '-instances=$_DB_INSTANCE_CONNECTION_NAME=tcp:5432'
 
   # =====================================================
   # STEP 5: DEPLOY

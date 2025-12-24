@@ -13,7 +13,6 @@ steps:
         pip install pytest httpx
         
         echo "Running tests..."
-        # Dummy DBs for testing
         export TRADE_BOT_DB_URL="sqlite+aiosqlite:///:memory:"
         export CRYPTO_BACKEND_DB_URL="sqlite+aiosqlite:///:memory:"
         pytest
@@ -37,15 +36,14 @@ steps:
     id: 'push-image'
     args: [
       'push', 
-      # FIX: Explicitly push the specific SHA version required by the Deploy step
       '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
     ]
 
   # =====================================================
-  # STEP 4: DATABASE MIGRATION (ALEMBIC)
+  # STEP 4: DATABASE RESET & RECREATION
   # =====================================================
   - name: '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
-    id: 'run-migrations'
+    id: 'reset-and-recreate-db'
     entrypoint: 'bash'
     secretEnv: ['DB_PASSWORD']
     args:
@@ -53,13 +51,18 @@ steps:
       - |
         echo "Waiting for Cloud SQL Proxy..."
         sleep 5
-        export DATABASE_URL="postgresql+asyncpg://$_DB_USER:$$DB_PASSWORD@127.0.0.1:5432/trade_bot_db"
         
-        echo "Wiping and recreating tables..."
-        python3 reset_db.py   # <--- UNCOMMENT THIS LINE
+        # Inject necessary environment variables for database.py to build the URL
+        export DB_USER=$_DB_USER
+        export DB_PASSWORD=$$DB_PASSWORD
+        export INSTANCE_CONNECTION_NAME="localhost" # Proxy is local to this container
         
-        echo "Running migrations..."
-        python3 -m alembic upgrade head
+        echo "Wiping and recreating tables for all databases..."
+        python3 reset_db.py
+        
+        # Optional: Uncomment if you decide to use Alembic later
+        # echo "Running Alembic migrations..."
+        # python3 -m alembic upgrade head
     services:
       - name: 'gcr.io/cloudsql-docker/gce-proxy:latest'
         args:
@@ -83,20 +86,14 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      
-      # 1. Connect to your Cloud SQL Instance
       - '--add-cloudsql-instances'
       - '$_DB_INSTANCE_CONNECTION_NAME'
-      
-      # 2. Inject the Secret from Secret Manager
       - '--set-secrets'
-      - 'DB_PASSWORD=DB_PASSWORD:latest,'
+      - 'DB_PASSWORD=DB_PASSWORD:latest'
       - '--set-secrets'
-      - 'NOWPAYMENTS_API_KEY=NOWPAYMENTS_API_KEY:latest,'
+      - 'NOWPAYMENTS_API_KEY=NOWPAYMENTS_API_KEY:latest'
       - '--set-secrets'
       - 'NOWPAYMENTS_IPN_SECRET=NOWPAYMENTS_IPN_SECRET:latest'
-
-      # 3. Set other non-secret Env Vars
       - '--set-env-vars'
       - 'DB_USER=$_DB_USER'
       - '--set-env-vars'
@@ -107,7 +104,7 @@ steps:
       - 'DB_NAME_CRYPTO=crypto_backend_db'
 
 # =====================================================
-# VARIABLES
+# SECRETS & VARIABLES
 # =====================================================
 availableSecrets:
   secretManager:
@@ -116,16 +113,13 @@ availableSecrets:
 
 substitutions:
   _REGION: 'europe-west4'
-  _REPO_NAME: 'app-repo'  # Ensure you created this in Artifact Registry
+  _REPO_NAME: 'app-repo'
   _IMAGE_NAME: 'trade-backend'
   _SERVICE_NAME: 'trade-backend-service'
-  
-  # Your Specific DB Details
   _DB_INSTANCE_CONNECTION_NAME: 'albiontradebot-backend:europe-west4:albion-trade-bot-db'
   _DB_USER: 'postgres' 
 
 options:
   logging: CLOUD_LOGGING_ONLY
 images:
-  # This automatically pushes the 'latest' tag at the end of a successful build
   - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:latest'

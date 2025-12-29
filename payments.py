@@ -13,9 +13,9 @@ import os
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
 PLANS = {
-    "1_week": {"price": 10, "days": 7},
-    "1_month": {"price": 25, "days": 30},
-    "3_month": {"price": 60.0, "days": 90},
+    "1_week": {"price": 15, "days": 7},
+    "1_month": {"price": 50, "days": 30},
+    "3_month": {"price": 130, "days": 90},
 }
 
 @router.post("/create", response_model=schemas.PaymentResponse)

@@ -9,6 +9,7 @@ import models, dependencies
 from schemas import *
 from buffer import price_buffer
 from database import trade_bot_engine, crypto_backend_engine
+from auth import router as auth_router
 
 # --- LIFESPAN (Startup & Shutdown) ---
 @asynccontextmanager
@@ -27,6 +28,8 @@ async def lifespan(app: FastAPI):
 # --- APP INITIALIZATION ---
 # Pass the lifespan handler here instead of using on_event
 app = FastAPI(title="Trade Bot & Crypto Backend", lifespan=lifespan)
+
+app.include_router(auth_router)
 
 # Add this to main.py
 @app.get("/", tags=["System"])

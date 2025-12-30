@@ -56,11 +56,13 @@ async def create_payment(
 async def payment_webhook(request: Request, db: AsyncSession = Depends(dependencies.get_crypto_db)):
     sig = request.headers.get('x-nowpayments-sig')
     body = await request.body()
+    data = await request.json()
+    sorted_data = json.dumps(data, separators=(',', ':'), sort_keys=True)
     
     # Verify signature
     calc_sig = hmac.new(
         os.getenv("NOWPAYMENTS_IPN_SECRET").encode(), 
-        body, 
+        sorted_data.encode(), 
         hashlib.sha512
     ).hexdigest()
     

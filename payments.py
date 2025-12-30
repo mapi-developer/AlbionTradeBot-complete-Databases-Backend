@@ -14,6 +14,7 @@ PLANS = {
     "1_week": {"price": 15.0, "days": 7},
     "1_month": {"price": 50.0, "days": 30},
     "3_month": {"price": 130.0, "days": 90},
+    "test": {"price": 3, "days": 1},
 }
 
 @router.post("/create", response_model=schemas.PaymentResponse)

@@ -132,8 +132,8 @@ class Payment(Base):
     __tablename__ = "Payment"
 
     # ID from NOWPayments
-    payment_id: Mapped[int] = mapped_column(Integer, primary_key=True) 
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("User.id"), index=True)
+    payment_id: Mapped[BigInteger] = mapped_column(BigInteger, primary_key=True) 
+    user_id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey("User.id"), index=True)
     
     status: Mapped[str] = mapped_column(String) # waiting, finished, failed
     price_amount: Mapped[float] = mapped_column(Float)

@@ -42,7 +42,7 @@ async def create_payment(
         data = resp.json()
 
     new_payment = models.Payment(
-        payment_id=str(data['id']),
+        payment_id=int(data['id']),
         user_id=user_id,
         status="waiting",
         price_amount=plan['price']

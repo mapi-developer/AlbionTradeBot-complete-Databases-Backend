@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from typing import List, Optional, Literal
 from datetime import datetime, timedelta, timezone
+import random
 
 import models, dependencies
 from schemas import *
@@ -212,7 +213,12 @@ async def create_invoice(
     if not user_check.scalar_one_or_none():
          raise HTTPException(status_code=404, detail="User not found")
 
+    # FIX: Generate ID manually because Invoice.id is BigInteger and NOT auto-increment 
+    # (it usually comes from NOWPayments)
+    generated_id = random.getrandbits(32)
+
     new_invoice = models.Invoice(
+        id=generated_id,
         user_id=user_id,
         amount=invoice_data.amount,
         status="pending",

@@ -26,7 +26,8 @@ async def test_create_user_and_invoice(client):
     
     assert data["status"] == "pending"
     assert data["user_id"] == user_id
-    assert data["amount"] == 15.00
+    # The API returns the ORM model, which uses 'price_amount', not 'amount'
+    assert data["price_amount"] == 15.00
 
 @pytest.mark.asyncio
 async def test_subscription_logic(client):

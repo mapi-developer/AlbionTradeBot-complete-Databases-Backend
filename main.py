@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select
 from typing import List, Optional, Literal
 from datetime import datetime, timedelta, timezone
-import random
+import random 
 
 import models, dependencies
 from schemas import *
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     await trade_bot_engine.dispose()
     await crypto_backend_engine.dispose()
 
-# --- APP ---
+# --- APP INITIALIZATION ---
 app = FastAPI(title="Trade Bot & Crypto Backend", lifespan=lifespan)
 
 app.include_router(auth.router, tags=["Auth"])
@@ -108,7 +108,6 @@ async def create_user(
     user: UserCreate, 
     db: AsyncSession = Depends(dependencies.get_crypto_db)
 ):
-    # Check if exists
     query = select(models.User).where(
         (models.User.email == user.email) | (models.User.username == user.username)
     )
@@ -177,7 +176,6 @@ async def add_subscription(
     
     now = datetime.now(timezone.utc)
     
-    # Logic: Extend if active, Start new if expired
     if user.subscribed_until and user.subscribed_until.replace(tzinfo=timezone.utc) > now:
         user.subscribed_until = user.subscribed_until.replace(tzinfo=timezone.utc) + timedelta(days=sub_data.days)
     else:
@@ -213,17 +211,16 @@ async def create_invoice(
     if not user_check.scalar_one_or_none():
          raise HTTPException(status_code=404, detail="User not found")
 
-    # FIX: Generate ID manually because Invoice.id is BigInteger and NOT auto-increment 
-    # (it usually comes from NOWPayments)
+    # Generate ID manually because Invoice.id is BigInteger (External ID)
     generated_id = random.getrandbits(32)
 
     new_invoice = models.Invoice(
         id=generated_id,
         user_id=user_id,
-        amount=invoice_data.amount,
+        price_amount=invoice_data.amount,    # Map 'amount' -> 'price_amount'
+        pay_currency=invoice_data.currency,  # Map 'currency' -> 'pay_currency'
         status="pending",
-        currency=invoice_data.currency,
-        subscription_plan=invoice_data.subscription_plan,
+        # subscription_plan is NOT in models.Invoice, so we skip it
         created_at=datetime.now(timezone.utc)
     )
     db.add(new_invoice)
@@ -258,4 +255,3 @@ async def get_last_invoices(
     )
     result = await db.execute(stmt)
     return result.scalars().all()
-

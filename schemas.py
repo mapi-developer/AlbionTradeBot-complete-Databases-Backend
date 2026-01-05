@@ -14,34 +14,6 @@ class ItemPriceUpdate(BaseModel):
     price_martlock: Optional[int] = None
     price_brecilien: Optional[int] = None
 
-class HistoryUpdate(BaseModel):
-    unique_name: str
-
-    black_market_day: Optional[int] = None
-    black_market_week: Optional[int] = None
-    black_market_month: Optional[int] = None    
-    caerleon_day: Optional[int] = None
-    caerleon_week: Optional[int] = None
-    caerleon_month: Optional[int] = None
-    lymhurst_day: Optional[int] = None
-    lymhurst_week: Optional[int] = None
-    lymhurst_month: Optional[int] = None
-    bridgewatch_day: Optional[int] = None
-    bridgewatch_week: Optional[int] = None
-    bridgewatch_month: Optional[int] = None
-    fort_sterling_day: Optional[int] = None
-    fort_sterling_week: Optional[int] = None
-    fort_sterling_month: Optional[int] = None
-    thetford_day: Optional[int] = None
-    thetford_week: Optional[int] = None
-    thetford_month: Optional[int] = None
-    martlock_day: Optional[int] = None
-    martlock_week: Optional[int] = None
-    martlock_month: Optional[int] = None
-    brecilien_day: Optional[int] = None
-    brecilien_week: Optional[int] = None
-    brecilien_month: Optional[int] = None
-
 # --- User Schemas ---
 class UserCreate(BaseModel):
     email: EmailStr

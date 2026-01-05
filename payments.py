@@ -1,7 +1,7 @@
 import hmac, hashlib, json
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from datetime import datetime, timedelta, timezone
 
 import models, dependencies, schemas
@@ -30,11 +30,12 @@ async def create_payment(
     
     # NOWPayments API Call
     url = "https://api.nowpayments.io/v1/invoice"
+    # Ensure this env var is set
     headers = {"x-api-key": os.getenv("NOWPAYMENTS_API_KEY")}
-    payload = {
+    payload = { 
         "price_amount": plan['price'],
         "price_currency": "usd",
-        "order_id": f"{user_id}::{plan['days']}",
+        "order_id": f"{user_id}::{plan['days']}", # encoding info in order_id
         "ipn_callback_url": "https://trade-backend-service-1054089939982.europe-west4.run.app/payments/webhook"
     }
 
@@ -42,13 +43,16 @@ async def create_payment(
         resp = await client.post(url, json=payload, headers=headers)
         data = resp.json()
 
-    new_payment = models.Payment(
-        payment_id=int(data['id']),
+    # Create Invoice (formerly Payment)
+    # Using 'id' from NOWPayments as the primary key or unique identifier
+    new_invoice = models.Invoice(
+        id=int(data['id']), 
         user_id=user_id,
         status="waiting",
-        price_amount=plan['price']
+        price_amount=plan['price'],
+        pay_currency="usd" 
     )
-    db.add(new_payment)
+    db.add(new_invoice)
     await db.commit()
     
     return {"invoice_url": data['invoice_url']}
@@ -57,8 +61,8 @@ async def create_payment(
 async def payment_webhook(request: Request, db: AsyncSession = Depends(dependencies.get_crypto_db)):
     sig = request.headers.get('x-nowpayments-sig')
     body = await request.body()
-    data = await request.json()
-    sorted_data = json.dumps(data, separators=(',', ':'), sort_keys=True)
+    data_json = await request.json()
+    sorted_data = json.dumps(data_json, separators=(',', ':'), sort_keys=True)
     
     # Verify signature
     calc_sig = hmac.new(
@@ -70,11 +74,22 @@ async def payment_webhook(request: Request, db: AsyncSession = Depends(dependenc
     if sig != calc_sig:
         raise HTTPException(403, "Invalid Signature")
 
-    data = json.loads(body)
-    if data.get('payment_status') == 'finished':
-        user_id, days = map(int, data.get('order_id').split("::"))
+    # Process Payment
+    if data_json.get('payment_status') == 'finished':
+        payment_id = int(data_json.get('id')) # The NOWPayments Invoice ID
         
-        # Update User Subscription (Stacking Logic)
+        # 1. Update Invoice Status to "done"
+        stmt = (
+            update(models.Invoice)
+            .where(models.Invoice.id == payment_id)
+            .values(status="done")
+        )
+        await db.execute(stmt)
+
+        # 2. Update User Subscription
+        # Parse user_id and days from order_id passed earlier
+        user_id, days = map(int, data_json.get('order_id').split("::"))
+        
         res = await db.execute(select(models.User).where(models.User.id == user_id))
         user = res.scalar_one_or_none()
         
@@ -82,11 +97,12 @@ async def payment_webhook(request: Request, db: AsyncSession = Depends(dependenc
             now = datetime.now(timezone.utc)
             current = user.subscribed_until.replace(tzinfo=timezone.utc) if user.subscribed_until else now
             
+            # Stack subscription time
             if current > now:
                 user.subscribed_until = current + timedelta(days=days)
             else:
                 user.subscribed_until = now + timedelta(days=days)
             
-            await db.commit()
+        await db.commit()
 
     return {"status": "ok"}

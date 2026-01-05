@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime, timedelta, timezone
 
 import models, dependencies
@@ -15,25 +15,18 @@ import payments
 # --- LIFESPAN (Startup & Shutdown) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # REMOVE the create_all logic here!
-    # It is already handled by reset_db.py in the Cloud Build step.
     print("Startup: Service is starting...")
-    
-    yield  # Application runs
-    
-    # Shutdown: Dispose Engines
+    yield 
     print("Shutdown: Closing database connections...")
     await trade_bot_engine.dispose()
     await crypto_backend_engine.dispose()
 
-# --- APP INITIALIZATION ---
-# Pass the lifespan handler here instead of using on_event
+# --- APP ---
 app = FastAPI(title="Trade Bot & Crypto Backend", lifespan=lifespan)
 
 app.include_router(auth.router, tags=["Auth"])
 app.include_router(payments.router, tags=["Payments"])
 
-# Add this to main.py
 @app.get("/", tags=["System"])
 async def health_check():
     return {"status": "alive", "service": "Albion Trade Bot Backend"}
@@ -45,86 +38,64 @@ def hash_password(plain_password: str) -> str:
     # TODO: Replace with 'passlib' or 'bcrypt' in production
     return f"hashed_{plain_password}"
 
-
 # ==========================================
 # TRADE BOT ENDPOINTS (DB 1)
 # ==========================================
 
 @app.put("/items/prices", tags=["Trade Bot"])
-async def update_prices(
+async def update_price(
     updates: List[ItemPriceUpdate],
+    type: Literal["fast", "order"] = Query(..., description="Type of item price: 'fast' or 'order'")
 ):
-    """
-    High-frequency endpoint. 
-    Receives updates -> Pushes to Memory Buffer -> Returns OK immediately.
-    """
-    await price_buffer.add_updates(updates)
-    return {"message": "Updates queued", "buffer_size": len(price_buffer._buffer)}
+    await price_buffer.add_updates(type, updates)
+    return {"message": "Updates queued", "type": type}
 
 @app.post("/system/flush-buffer", tags=["System"])
 async def flush_buffer_endpoint(
     db: AsyncSession = Depends(dependencies.get_trade_db)
 ):
-    """
-    CRITICAL: This is hit by Cloud Scheduler every 1 minute.
-    Writes buffered data to the database in one big batch.
-    """
     count = await price_buffer.flush(db)
     if count == 0:
-        return {"status": "skipped", "message": "Buffer was empty"}
+        return {"status": "skipped", "message": "Buffers were empty"}
     return {"status": "success", "flushed_items": count}
-
-@app.put("/items/history", tags=["Trade Bot"])
-async def update_history(
-    updates: List[HistoryUpdate],
-    db: AsyncSession = Depends(dependencies.get_trade_db)
-):
-    """
-    Updates average price history directly (less frequent than live prices).
-    """
-    count = 0
-    for hist in updates:
-        data = hist.dict(exclude_unset=True)
-        unique_name = data.pop("unique_name")
-        
-        if data:
-            data["updated_at"] = datetime.now(timezone.utc)
-            stmt = (
-                update(models.AvgPrice)
-                .where(models.AvgPrice.unique_name == unique_name)
-                .values(**data)
-            )
-            await db.execute(stmt)
-            count += 1
-
-    await db.commit()
-    return {"message": f"Updated history for {count} items"}
 
 @app.get("/items/", tags=["Trade Bot"])
 async def get_prices(
-    city: Optional[str] = None,
     item_names: Optional[List[str]] = Query(None),
+    city: Optional[str] = Query(None, description="Specific city to fetch prices from (e.g., lymhurst)"),
+    type: Literal["fast", "order"] = Query("fast", description="Which table to query"),
     db: AsyncSession = Depends(dependencies.get_trade_db)
 ):
-    stmt = select(models.Item)
-    if item_names:
-        stmt = stmt.where(models.Item.unique_name.in_(item_names))
+    target_model = models.ItemFast if type == "fast" else models.ItemOrder
     
-    result = await db.execute(stmt)
-    items = result.scalars().all()
-    return items
+    if city:
+        city_slug = city.lower().replace(" ", "_")
+        price_col = getattr(target_model, f"price_{city_slug}", None)
+        updated_col = getattr(target_model, f"{city_slug}_updated_at", None)
 
-@app.get("/items/avg", tags=["Trade Bot"])
-async def get_avg(
-    item_names: Optional[List[str]] = Query(None),
-    db: AsyncSession = Depends(dependencies.get_trade_db)
-):
-    stmt = select(models.AvgPrice)
+        if not price_col:
+            raise HTTPException(status_code=400, detail=f"Invalid city: {city}")
+
+        stmt = select(target_model.unique_name, price_col, updated_col)
+    else:
+        stmt = select(target_model)
+
     if item_names:
-        stmt = stmt.where(models.AvgPrice.unique_name.in_(item_names))
+        stmt = stmt.where(target_model.unique_name.in_(item_names))
     
     result = await db.execute(stmt)
-    return result.scalars().all()
+
+    if city:
+        data = []
+        for row in result.all():
+            data.append({
+                "unique_name": row[0],
+                f"price_{city_slug}": row[1],
+                f"{city_slug}_updated_at": row[2]
+            })
+        return data
+    else:
+        return result.scalars().all()
 
 # ==========================================
 # USER & INVOICE ENDPOINTS (DB 2)

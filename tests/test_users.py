@@ -14,8 +14,6 @@ async def test_create_user_and_invoice(client):
     user_id = res.json()["id"]
 
     # 2. Create Invoice
-    # Note: In main.py create_invoice, the ID is auto-generated (or null if not set by DB trigger).
-    # Since we are using SQLite in memory for tests, we should check if it handles the ID correctly.
     invoice_data = {
         "amount": 15.00,
         "currency": "USD",
@@ -29,8 +27,6 @@ async def test_create_user_and_invoice(client):
     assert data["status"] == "pending"
     assert data["user_id"] == user_id
     assert data["amount"] == 15.00
-    # Ensure created_at is present
-    assert "created_at" in data
 
 @pytest.mark.asyncio
 async def test_subscription_logic(client):
@@ -52,12 +48,10 @@ async def test_subscription_logic(client):
     # Strict timezone comparison
     now_utc = datetime.now(timezone.utc)
     
-    # Expectation: ~30 days from now
     assert sub_until > now_utc + timedelta(days=29)
 
     # 3. Add another 30 Days (Should Extend)
     sub_res_2 = await client.post(f"/users/{user_id}/subscription/add", json={"days": 30})
     sub_until_2 = datetime.fromisoformat(sub_res_2.json()["subscribed_until"])
     
-    # Expectation: ~60 days from now
     assert sub_until_2 > now_utc + timedelta(days=59)

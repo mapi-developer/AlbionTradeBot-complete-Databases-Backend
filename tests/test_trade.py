@@ -63,7 +63,6 @@ async def test_update_price_flow_order(client, trade_db_engine):
     assert flush_res.status_code == 200
 
     # 5. Verify Data (ItemOrder)
-    # Note: We must specify type=order to get the data back
     final_res = await client.get("/items/", params={"item_names": ["T4_BOW"], "type": "order"})
     items = final_res.json()
     assert len(items) > 0
@@ -121,10 +120,7 @@ async def test_get_prices_city_filter(client, trade_db_engine):
     data = res.json()[0]
 
     # 3. Verify Structure
-    # Should contain unique_name, price_lymhurst, and lymhurst_updated_at
     assert "unique_name" in data
     assert "price_lymhurst" in data
     assert data["price_lymhurst"] == 300
-    
-    # Should NOT contain other city prices
     assert "price_thetford" not in data

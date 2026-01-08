@@ -106,7 +106,7 @@ async def test_buffer_merging(client, trade_db_engine):
 @pytest.mark.asyncio
 async def test_get_prices_city_filter(client, trade_db_engine):
     """
-    Test that the 'city' parameter correctly filters the response fields.
+    Test that the 'cities' parameter correctly filters the response fields for a single city.
     """
     # 1. SEED DATA
     async with trade_db_engine.begin() as conn:
@@ -114,8 +114,8 @@ async def test_get_prices_city_filter(client, trade_db_engine):
             "INSERT INTO ItemFast (unique_name, price_lymhurst, price_thetford) VALUES ('T4_HELM', 300, 400)"
         ))
 
-    # 2. Get with City Filter
-    res = await client.get("/items/", params={"item_names": ["T4_HELM"], "city": "lymhurst", "type": "fast"})
+    # 2. Get with City Filter (Note: using 'cities' list param)
+    res = await client.get("/items/", params={"item_names": ["T4_HELM"], "cities": ["lymhurst"], "type": "fast"})
     assert res.status_code == 200
     data = res.json()[0]
 
@@ -123,4 +123,29 @@ async def test_get_prices_city_filter(client, trade_db_engine):
     assert "unique_name" in data
     assert "price_lymhurst" in data
     assert data["price_lymhurst"] == 300
+    # Ensure unrequested city is NOT present
+    assert "price_thetford" not in data
+
+@pytest.mark.asyncio
+async def test_get_prices_multiple_cities(client, trade_db_engine):
+    """
+    Test that the 'cities' parameter correctly fetches multiple specific cities.
+    """
+    # 1. SEED DATA
+    async with trade_db_engine.begin() as conn:
+        await conn.execute(text(
+            "INSERT INTO ItemFast (unique_name, price_lymhurst, price_thetford, price_martlock) VALUES ('T4_BOOTS', 100, 200, 300)"
+        ))
+
+    # 2. Get with Multiple Cities
+    res = await client.get("/items/", params={"item_names": ["T4_BOOTS"], "cities": ["lymhurst", "martlock"], "type": "fast"})
+    assert res.status_code == 200
+    data = res.json()[0]
+
+    # 3. Verify Structure
+    assert data["unique_name"] == "T4_BOOTS"
+    assert data["price_lymhurst"] == 100
+    assert data["price_martlock"] == 300
+    
+    # Ensure unrequested city is NOT present
     assert "price_thetford" not in data

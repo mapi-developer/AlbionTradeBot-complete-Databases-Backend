@@ -15,12 +15,13 @@ crypto_db_name = os.getenv("DB_NAME_CRYPTO", "crypto_backend_db")
 
 # Function to build URL
 def get_db_url(db_name):
-    if os.getenv("K_SERVICE"): # Check if running on Cloud Run
-        # Use Unix Socket for Cloud Run
+    is_ip = "." in db_host and ":" not in db_host
+    if os.getenv("K_SERVICE") and not is_ip:
+        # Use Unix Socket (Standard Cloud SQL)
         return f"postgresql+asyncpg://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{db_host}"
     else:
-        # Use Localhost for local testing
-        return f"postgresql+asyncpg://{db_user}:{db_pass}@localhost/{db_name}"
+        # Use TCP (Localhost OR Private IP on Cloud Run)
+        return f"postgresql+asyncpg://{db_user}:{db_pass}@{db_host}/{db_name}"
 
 # Create Engines
 trade_bot_engine = create_async_engine(get_db_url(trade_db_name), echo=False)

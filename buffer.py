@@ -16,7 +16,10 @@ class PriceUpdateBuffer:
 
     async def add_updates(self, type_: Literal["fast", "order"], updates: list):
         if type_ not in self._buffers:
-            return # Or raise error
+            return 
+
+        # Capture the time when the update ARRIVED
+        current_time = datetime.now(timezone.utc)
 
         async with self._lock:
             for item in updates:
@@ -26,9 +29,25 @@ class PriceUpdateBuffer:
                 if not data:
                     continue
 
+                # ================= NEW LOGIC =================
+                # Iterate over keys to find price fields and add timestamps
+                # We use list(data.keys()) to avoid error while modifying the dict
+                for key in list(data.keys()):
+                    if key.startswith("price_"):
+                        # Example: "price_martlock" -> "martlock"
+                        city_slug = key.replace("price_", "")
+                        
+                        # Create the timestamp field: "martlock_updated_at"
+                        timestamp_field = f"{city_slug}_updated_at"
+                        
+                        # Set the time
+                        data[timestamp_field] = current_time
+                # =============================================
+
                 if name not in self._buffers[type_]:
                     self._buffers[type_][name] = {}
                 
+                # Update the buffer (merges new prices + new timestamps)
                 self._buffers[type_][name].update(data)
 
     async def flush(self, db: AsyncSession):
@@ -62,6 +81,7 @@ class PriceUpdateBuffer:
     async def _flush_data(self, db: AsyncSession, model, data_map: Dict):
         count = 0
         for unique_name, fields in data_map.items():
+            # This updates the ROW'S global "updated_at" (last time anything changed)
             fields["updated_at"] = datetime.now(timezone.utc)
             
             # Update existing

@@ -37,7 +37,7 @@ steps:
     ]
 
   # =====================================================
-  # STEP 4: DATABASE RESET (Running inside the newly built image)
+  # STEP 4: DATABASE RESET (Running inside the newly built image).
   # =====================================================
   - name: '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
     id: 'reset-db'

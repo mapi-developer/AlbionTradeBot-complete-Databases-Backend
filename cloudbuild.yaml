@@ -118,7 +118,7 @@ steps:
       - 'SECRET_KEY=73c680ee1ed6757da4430489104cc51e3f117199faae505ad41aff291f1b7b7f'
 
 # =====================================================
-# DEFINITIONS (MUST BE AT THE END)
+# DEFINITIONS (MUST BE AT THE END).
 # =====================================================
 
 availableSecrets:

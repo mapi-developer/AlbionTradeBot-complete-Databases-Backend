@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func, case, and_
 from typing import List, Optional, Literal
 from datetime import datetime, timedelta, timezone
 import random 
@@ -120,6 +120,59 @@ async def get_prices(
     else:
         # If we selected the whole model, return scalars
         return result.scalars().all()
+
+@app.get("/items/prices-up-to-date", tags=["Trade Bot"])
+async def get_prices_up_to_date(
+    db: AsyncSession = Depends(dependencies.get_trade_db)
+):
+    """
+    Returns the percentage of items updated within the last 5 hours 
+    for each city, combining data from both ItemFast and ItemOrder.
+    """
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=5)
+
+    cities = [
+        "black_market", "caerleon", "lymhurst", "bridgewatch", 
+        "fort_sterling", "thetford", "martlock", "brecilien"
+    ]
+
+    def build_stats_query(model):
+        selections = [func.count().label("total_items")]
+        
+        for city in cities:
+            col_name = f"{city}_updated_at"
+            col = getattr(model, col_name)
+            selections.append(
+                func.sum(
+                    case((col >= cutoff_time, 1), else_=0)
+                ).label(city)
+            )
+        return select(*selections)
+
+    res_fast = await db.execute(build_stats_query(models.ItemFast))
+    row_fast = res_fast.one() 
+    res_order = await db.execute(build_stats_query(models.ItemOrder))
+    row_order = res_order.one()
+    
+    total_items_combined = (row_fast[0] or 0) + (row_order[0] or 0)
+
+    response_data = {}
+
+    if total_items_combined == 0:
+        for city in cities:
+            response_data[city] = "0%"
+    else:
+        for i, city in enumerate(cities):
+            count_fast = row_fast[i + 1] or 0
+            count_order = row_order[i + 1] or 0
+            
+            total_up_to_date = count_fast + count_order
+            
+            percent = (total_up_to_date / total_items_combined) * 100
+            
+            response_data[city] = f"{int(percent)}%"
+
+    return response_data
 
 # ==========================================
 # USER & INVOICE ENDPOINTS (DB 2)

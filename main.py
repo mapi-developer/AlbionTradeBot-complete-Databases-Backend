@@ -126,10 +126,10 @@ async def get_prices_up_to_date(
     db: AsyncSession = Depends(dependencies.get_trade_db)
 ):
     """
-    Returns the percentage of items updated within the last 5 hours 
+    Returns the percentage of items updated within the last 8 hours 
     for each city, calculated ONLY against items that have a price (not None).
     """
-    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=5)
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=8)
 
     cities = [
         "black_market", "caerleon", "lymhurst", "bridgewatch", 

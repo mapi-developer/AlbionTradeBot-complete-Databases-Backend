@@ -127,7 +127,7 @@ async def get_prices_up_to_date(
 ):
     """
     Returns the percentage of items updated within the last 5 hours 
-    for each city, combining data from both ItemFast and ItemOrder.
+    for each city, calculated ONLY against items that have a price (not None).
     """
     cutoff_time = datetime.now(timezone.utc) - timedelta(hours=5)
 
@@ -137,39 +137,46 @@ async def get_prices_up_to_date(
     ]
 
     def build_stats_query(model):
-        selections = [func.count().label("total_items")]
-        
+        selections = []
         for city in cities:
-            col_name = f"{city}_updated_at"
-            col = getattr(model, col_name)
+            price_col = getattr(model, f"price_{city}")
+            updated_col = getattr(model, f"{city}_updated_at")
+            
+            selections.append(func.count(price_col))
+            
             selections.append(
                 func.sum(
-                    case((col >= cutoff_time, 1), else_=0)
-                ).label(city)
+                    case(
+                        (and_(price_col.is_not(None), updated_col >= cutoff_time), 1), 
+                        else_=0
+                    )
+                )
             )
         return select(*selections)
 
     res_fast = await db.execute(build_stats_query(models.ItemFast))
-    row_fast = res_fast.one() 
+    row_fast = res_fast.one()
     res_order = await db.execute(build_stats_query(models.ItemOrder))
     row_order = res_order.one()
-    
-    total_items_combined = (row_fast[0] or 0) + (row_order[0] or 0)
 
     response_data = {}
 
-    if total_items_combined == 0:
-        for city in cities:
+    for i, city in enumerate(cities):
+        idx_total = i * 2
+        idx_recent = i * 2 + 1
+
+        fast_total = row_fast[idx_total] or 0
+        fast_recent = row_fast[idx_recent] or 0
+        order_total = row_order[idx_total] or 0
+        order_recent = row_order[idx_recent] or 0
+
+        combined_total_valid = fast_total + order_total
+        combined_recent_valid = fast_recent + order_recent
+
+        if combined_total_valid == 0:
             response_data[city] = "0%"
-    else:
-        for i, city in enumerate(cities):
-            count_fast = row_fast[i + 1] or 0
-            count_order = row_order[i + 1] or 0
-            
-            total_up_to_date = count_fast + count_order
-            
-            percent = (total_up_to_date / total_items_combined) * 100
-            
+        else:
+            percent = (combined_recent_valid / combined_total_valid) * 100
             response_data[city] = f"{int(percent)}%"
 
     return response_data

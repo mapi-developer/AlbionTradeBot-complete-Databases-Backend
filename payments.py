@@ -12,8 +12,8 @@ router = APIRouter(prefix="/payments", tags=["Payments"])
 
 PLANS = {
     "1_week": {"price": 14.99, "days": 7},
-    "1_month": {"price": 49.99, "days": 30},
-    "3_months": {"price": 124.99, "days": 90},
+    "1_month": {"price": 34.99, "days": 30},
+    "3_months": {"price": 84.99, "days": 90},
 }
 
 @router.get("/plans", tags=["Payments"])

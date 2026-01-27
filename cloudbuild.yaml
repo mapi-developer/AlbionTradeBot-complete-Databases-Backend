@@ -135,6 +135,8 @@ substitutions:
   _DB_USER: 'postgres' 
 
 options:
+  pool:
+    name: 'projects/albion-bot-cheap-v1/locations/europe-west1/workerPools/private-pool-1'
   logging: CLOUD_LOGGING_ONLY
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 

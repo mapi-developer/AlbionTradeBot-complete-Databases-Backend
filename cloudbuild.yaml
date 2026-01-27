@@ -9,7 +9,7 @@ steps:
   #     - '-c'
   #     - |
   #       pip install --no-cache-dir -r requirements.txt
-  #       pip install pytest httpx
+  #       pip install pytest httpx pytest-asyncio
   #       export TRADE_BOT_DB_URL="sqlite+aiosqlite:///:memory:"
   #       export CRYPTO_BACKEND_DB_URL="sqlite+aiosqlite:///:memory:"
   #       pytest
@@ -37,7 +37,7 @@ steps:
     ]
 
   # =====================================================
-  # STEP 4: DATABASE RESET (Running inside the newly built image).
+  # STEP 4: DATABASE RESET
   # =====================================================
   - name: '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
     id: 'reset-db'
@@ -52,46 +52,21 @@ steps:
         chmod +x cloud_sql_proxy
         
         echo ">>> Starting Proxy (Private IP mode)..."
-        # 1. Start Proxy in background
-        # 2. Save logs to 'proxy.log' so we can read them if it fails
-        # 3. Use -ip_address_types=PRIVATE since you are in a Private Pool
+        # Using -ip_address_types=PRIVATE for your private connection
         ./cloud_sql_proxy -instances=$_DB_INSTANCE_CONNECTION_NAME=tcp:5432 -ip_address_types=PRIVATE > proxy.log 2>&1 &
         
-        PROXY_PID=$!
-        echo ">>> Proxy PID: $PROXY_PID"
-        
-        echo ">>> Waiting 5 seconds for Proxy to initialize..."
         sleep 5
-        
-        # Check if Proxy is still alive
-        if ! kill -0 $PROXY_PID > /dev/null 2>&1; then
-            echo "!!! PROXY DIED PREMATURELY !!!"
-            echo "--- PROXY LOGS START ---"
-            cat proxy.log
-            echo "--- PROXY LOGS END ---"
-            exit 1
-        fi
         
         echo ">>> Setting Environment Variables..."
         export DB_USER=$_DB_USER
         export DB_PASSWORD=$$DB_PASSWORD
-        # Force Python to use IPv4 Loopback
         export INSTANCE_CONNECTION_NAME="127.0.0.1"
         export DB_NAME_TRADE=trade_bot_db
         export DB_NAME_CRYPTO=crypto_backend_db
         
         echo ">>> Running Reset Script..."
+        # This script drops the public schema and recreates all tables from models.py
         python3 reset_db.py
-        RESET_EXIT_CODE=$?
-        
-        if [ $RESET_EXIT_CODE -ne 0 ]; then
-             echo "!!! SCRIPT FAILED !!!"
-             echo "--- PROXY LOGS (Last 20 lines) ---"
-             tail -n 20 proxy.log
-             exit $RESET_EXIT_CODE
-        fi
-        
-        echo ">>> Success."
 
   # =====================================================
   # STEP 5: DEPLOY
@@ -113,7 +88,7 @@ steps:
       - '--add-cloudsql-instances'
       - '$_DB_INSTANCE_CONNECTION_NAME'
       
-      # REMOVE the trailing commas at the end of these strings!
+      # Secrets from Secret Manager
       - '--set-secrets'
       - 'DB_PASSWORD=DB_PASSWORD:latest'
       - '--set-secrets'
@@ -121,6 +96,7 @@ steps:
       - '--set-secrets'
       - 'NOWPAYMENTS_IPN_SECRET=NOWPAYMENTS_IPN_SECRET:latest'
       
+      # Application Environment Variables
       - '--set-env-vars'
       - 'DB_USER=$_DB_USER'
       - '--set-env-vars'
@@ -144,9 +120,9 @@ steps:
       - '--set-env-vars'
       - 'SECRET_KEY=73c680ee1ed6757da4430489104cc51e3f117199faae505ad41aff291f1b7b7f'
 
-# ====================================================
-# DEFINITIONS (MUST BE AT THE END).
-# ====================================================
+# =====================================================
+# DEFINITIONS
+# =====================================================
 
 availableSecrets:
   secretManager:
@@ -159,9 +135,10 @@ substitutions:
   _IMAGE_NAME: 'trade-backend'
   _SERVICE_NAME: 'trade-backend-service'
   _DB_INSTANCE_CONNECTION_NAME: 'albion-bot-cheap-v1:europe-west1:albion-db-minimal'
-  _DB_USER: 'postgres' 
+  _DB_USER: 'postgres'
 
 options:
+  # Required for Private IP access to Cloud SQL
   pool:
     name: 'projects/albion-bot-cheap-v1/locations/europe-west1/workerPools/private-pool-1'
   logging: CLOUD_LOGGING_ONLY

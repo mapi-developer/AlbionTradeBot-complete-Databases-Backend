@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -15,13 +16,17 @@ crypto_db_name = os.getenv("DB_NAME_CRYPTO", "crypto_backend_db")
 
 # Function to build URL
 def get_db_url(db_name):
+    # Retrieve and URL-encode the password
+    raw_pass = os.getenv("DB_PASSWORD", "password")
+    encoded_pass = urllib.parse.quote_plus(raw_pass)  # <--- USE THIS
+
     is_ip = "." in db_host and ":" not in db_host
     if os.getenv("K_SERVICE") and not is_ip:
-        # Use Unix Socket (Standard Cloud SQL)
-        return f"postgresql+asyncpg://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{db_host}"
+        # Use Unix Socket
+        return f"postgresql+asyncpg://{db_user}:{encoded_pass}@/{db_name}?host=/cloudsql/{db_host}"
     else:
-        # Use TCP (Localhost OR Private IP on Cloud Run)
-        return f"postgresql+asyncpg://{db_user}:{db_pass}@{db_host}/{db_name}"
+        # Use TCP
+        return f"postgresql+asyncpg://{db_user}:{encoded_pass}@{db_host}/{db_name}"
 
 # Create Engines
 trade_bot_engine = create_async_engine(get_db_url(trade_db_name), echo=False)

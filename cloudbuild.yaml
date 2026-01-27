@@ -127,11 +127,11 @@ availableSecrets:
     env: 'DB_PASSWORD'
 
 substitutions:
-  _REGION: 'europe-west4'
+  _REGION: 'europe-west1'
   _REPO_NAME: 'app-repo'
   _IMAGE_NAME: 'trade-backend'
   _SERVICE_NAME: 'trade-backend-service'
-  _DB_INSTANCE_CONNECTION_NAME: 'albiontradebot-backend:europe-west4:albion-trade-bot-db'
+  _DB_INSTANCE_CONNECTION_NAME: 'albiontradebot-backend:europe-west1:albion-db-minimal'
   _DB_USER: 'postgres' 
 
 options:

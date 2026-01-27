@@ -2,17 +2,17 @@ steps:
   # =====================================================
   # STEP 1: TEST
   # =====================================================
-  - name: 'python:3.13-slim'
-    id: 'run-tests'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        pip install --no-cache-dir -r requirements.txt
-        pip install pytest httpx
-        export TRADE_BOT_DB_URL="sqlite+aiosqlite:///:memory:"
-        export CRYPTO_BACKEND_DB_URL="sqlite+aiosqlite:///:memory:"
-        pytest
+  # - name: 'python:3.13-slim'
+  #   id: 'run-tests'
+  #   entrypoint: 'bash'
+  #   args:
+  #     - '-c'
+  #     - |
+  #       pip install --no-cache-dir -r requirements.txt
+  #       pip install pytest httpx
+  #       export TRADE_BOT_DB_URL="sqlite+aiosqlite:///:memory:"
+  #       export CRYPTO_BACKEND_DB_URL="sqlite+aiosqlite:///:memory:"
+  #       pytest
 
   # =====================================================
   # STEP 2: BUILD

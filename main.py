@@ -22,7 +22,6 @@ async def lifespan(app: FastAPI):
     await trade_bot_engine.dispose()
     await crypto_backend_engine.dispose()
 
-# --- APP INITIALIZATION ---
 app = FastAPI(title="Trade Bot & Crypto Backend", lifespan=lifespan)
 
 app.include_router(auth.router, tags=["Auth"])
@@ -32,24 +31,24 @@ app.include_router(payments.router, tags=["Payments"])
 async def health_check():
     return {"status": "alive", "service": "Albion Trade Bot Backend"}
 
-# ==========================================
-# HELPER FUNCTIONS
-# ==========================================
 def hash_password(plain_password: str) -> str:
-    # TODO: Replace with 'passlib' or 'bcrypt' in production
     return f"hashed_{plain_password}"
 
 # ==========================================
 # TRADE BOT ENDPOINTS (DB 1)
 # ==========================================
 
+ServerType = Literal["EU", "US", "AS"]
+ItemType = Literal["fast", "order"]
+
 @app.put("/items/prices", tags=["Trade Bot"])
 async def update_price(
     updates: List[ItemPriceUpdate],
-    type: Literal["fast", "order"] = Query(..., description="Type of item price: 'fast' or 'order'")
+    server: ServerType = Query(..., description="Server Region: EU, US, or AS"),
+    type: ItemType = Query(..., description="Type of item price: 'fast' or 'order'")
 ):
-    await price_buffer.add_updates(type, updates)
-    return {"message": "Updates queued", "type": type}
+    await price_buffer.add_updates(server, type, updates)
+    return {"message": "Updates queued", "server": server, "type": type}
 
 @app.post("/system/flush-buffer", tags=["System"])
 async def flush_buffer_endpoint(
@@ -62,17 +61,17 @@ async def flush_buffer_endpoint(
 
 @app.get("/items/", tags=["Trade Bot"])
 async def get_prices(
+    server: ServerType = Query(..., description="Server Region: EU, US, or AS"),
     item_names: Optional[List[str]] = Query(None),
-    cities: Optional[List[str]] = Query(None, description="List of cities to fetch prices from (e.g., 'lymhurst', 'black_market')"),
-    type: Literal["fast", "order"] = Query("fast", description="Which table to query"),
+    cities: Optional[List[str]] = Query(None, description="List of cities (e.g. 'lymhurst')"),
+    type: ItemType = Query("fast", description="Which table to query"),
     db: AsyncSession = Depends(dependencies.get_trade_db)
 ):
-    target_model = models.ItemFast if type == "fast" else models.ItemOrder
+    # Select the correct model dynamically
+    target_model = models.MODEL_MAP[server][type]
     
-    # 1. Base statement always includes unique_name
     selected_columns = [target_model.unique_name]
     
-    # 2. Dynamically add columns based on requested cities
     if cities:
         for city in cities:
             city_slug = city.lower().replace(" ", "_")
@@ -80,61 +79,53 @@ async def get_prices(
             updated_col = getattr(target_model, f"{city_slug}_updated_at", None)
 
             if not price_col:
-                # You might want to skip invalid cities or raise an error
-                # For now, we raise an error to be safe
                 raise HTTPException(status_code=400, detail=f"Invalid city: {city}")
 
             selected_columns.append(price_col)
             selected_columns.append(updated_col)
             
-        # Select specific columns only
         stmt = select(*selected_columns)
     else:
-        # If no cities specified, fetch the entire model (all columns)
         stmt = select(target_model)
 
-    # 3. Apply Item Name Filtering
     if item_names:
         stmt = stmt.where(target_model.unique_name.in_(item_names))
     
     result = await db.execute(stmt)
 
-    # 4. Format Output
     if cities:
         data = []
         rows = result.all()
         for row in rows:
-            # row is a tuple: (unique_name, city1_price, city1_time, city2_price, city2_time...)
             item_data = {"unique_name": row[0]}
-            
-            # Helper index to iterate through the flat tuple
             current_idx = 1 
             for city in cities:
                 city_slug = city.lower().replace(" ", "_")
                 item_data[f"price_{city_slug}"] = row[current_idx]
                 item_data[f"{city_slug}_updated_at"] = row[current_idx + 1]
                 current_idx += 2
-            
             data.append(item_data)
         return data
     else:
-        # If we selected the whole model, return scalars
         return result.scalars().all()
 
 @app.get("/items/prices-up-to-date", tags=["Trade Bot"])
 async def get_prices_up_to_date(
+    server: ServerType = Query(..., description="Server Region: EU, US, or AS"),
     db: AsyncSession = Depends(dependencies.get_trade_db)
 ):
     """
-    Returns the percentage of items updated within the last 8 hours 
-    for each city, calculated ONLY against items that have a price (not None).
+    Returns update stats for the specified server.
     """
     cutoff_time = datetime.now(timezone.utc) - timedelta(hours=8)
-
     cities = [
         "black_market", "caerleon", "lymhurst", "bridgewatch", 
         "fort_sterling", "thetford", "martlock", "brecilien"
     ]
+
+    # Dynamically pick models
+    ModelFast = models.MODEL_MAP[server]["fast"]
+    ModelOrder = models.MODEL_MAP[server]["order"]
 
     def build_stats_query(model):
         selections = []
@@ -143,7 +134,6 @@ async def get_prices_up_to_date(
             updated_col = getattr(model, f"{city}_updated_at")
             
             selections.append(func.count(price_col))
-            
             selections.append(
                 func.sum(
                     case(
@@ -154,9 +144,9 @@ async def get_prices_up_to_date(
             )
         return select(*selections)
 
-    res_fast = await db.execute(build_stats_query(models.ItemFast))
+    res_fast = await db.execute(build_stats_query(ModelFast))
     row_fast = res_fast.one()
-    res_order = await db.execute(build_stats_query(models.ItemOrder))
+    res_order = await db.execute(build_stats_query(ModelOrder))
     row_order = res_order.one()
 
     response_data = {}

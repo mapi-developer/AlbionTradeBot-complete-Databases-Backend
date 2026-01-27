@@ -39,32 +39,32 @@ steps:
   # =====================================================
   # STEP 4: DATABASE RESET (Running inside the newly built image).
   # =====================================================
-  # - name: '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
-  #   id: 'reset-db'
-  #   entrypoint: 'bash'
-  #   secretEnv: ['DB_PASSWORD'] # <--- This uses the secret defined below
-  #   args:
-  #     - '-c'
-  #     - |
-  #       # 1. Install wget to get the proxy
-  #       apt-get update && apt-get install -y wget
-  #       wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy
-  #       chmod +x cloud_sql_proxy
+  - name: '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
+    id: 'reset-db'
+    entrypoint: 'bash'
+    secretEnv: ['DB_PASSWORD'] # <--- This uses the secret defined below
+    args:
+      - '-c'
+      - |
+        # 1. Install wget to get the proxy
+        apt-get update && apt-get install -y wget
+        wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy
+        chmod +x cloud_sql_proxy
         
-  #       # 2. Start Proxy in background
-  #       ./cloud_sql_proxy -instances=$_DB_INSTANCE_CONNECTION_NAME=tcp:5432 &
-  #       sleep 10
+        # 2. Start Proxy in background
+        ./cloud_sql_proxy -instances=$_DB_INSTANCE_CONNECTION_NAME=tcp:5432 &
+        sleep 10
         
-  #       # 3. Set Env for reset_db.py
-  #       # Note: $$DB_PASSWORD (double $) is required to use secretEnv in bash
-  #       export DB_USER=$_DB_USER
-  #       export DB_PASSWORD=$$DB_PASSWORD
-  #       export INSTANCE_CONNECTION_NAME="localhost"
-  #       export DB_NAME_TRADE=trade_bot_db
-  #       export DB_NAME_CRYPTO=crypto_backend_db
+        # 3. Set Env for reset_db.py
+        # Note: $$DB_PASSWORD (double $) is required to use secretEnv in bash
+        export DB_USER=$_DB_USER
+        export DB_PASSWORD=$$DB_PASSWORD
+        export INSTANCE_CONNECTION_NAME="localhost"
+        export DB_NAME_TRADE=trade_bot_db
+        export DB_NAME_CRYPTO=crypto_backend_db
         
-  #       echo "Starting Database Reset..."
-  #       python3 reset_db.py
+        echo "Starting Database Reset..."
+        python3 reset_db.py
 
   # =====================================================
   # STEP 5: DEPLOY

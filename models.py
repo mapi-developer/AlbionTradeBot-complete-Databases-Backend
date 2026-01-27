@@ -1,17 +1,18 @@
 from sqlalchemy import BigInteger, String, DateTime, ForeignKey, Integer, Float
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-from typing import Optional, List
+from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from database import Base
 
 # ==========================================
-# DATABASE 1: Trade Bot (Items)
+# DATABASE 1: Trade Bot (Items) - SHARED STRUCTURE
 # ==========================================
 
-class ItemFast(Base):
-    __tablename__ = "ItemFast"
-
+class ItemBase:
+    """
+    Mixin class containing all shared columns for Item tables.
+    """
     unique_name: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     
     # Prices
@@ -36,34 +37,35 @@ class ItemFast(Base):
 
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+# --- EU Tables ---
+class ItemFastEU(Base, ItemBase):
+    __tablename__ = "ItemFastEU"
 
-class ItemOrder(Base):
-    __tablename__ = "ItemOrder"
+class ItemOrderEU(Base, ItemBase):
+    __tablename__ = "ItemOrderEU"
 
-    unique_name: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    
-    # Prices
-    price_black_market: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
-    price_caerleon: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
-    price_lymhurst: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
-    price_bridgewatch: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
-    price_fort_sterling: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
-    price_thetford: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
-    price_martlock: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
-    price_brecilien: Mapped[Optional[BigInteger]] = mapped_column(BigInteger)
+# --- US Tables ---
+class ItemFastUS(Base, ItemBase):
+    __tablename__ = "ItemFastUS"
 
-    # Timestamps
-    black_market_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    caerleon_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    lymhurst_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    bridgewatch_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    fort_sterling_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    thetford_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    martlock_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    brecilien_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+class ItemOrderUS(Base, ItemBase):
+    __tablename__ = "ItemOrderUS"
 
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.now())
+# --- ASIA Tables ---
+class ItemFastAS(Base, ItemBase):
+    __tablename__ = "ItemFastAS"
 
+class ItemOrderAS(Base, ItemBase):
+    __tablename__ = "ItemOrderAS"
+
+
+# --- HELPER MAPPING ---
+# This allows dynamic lookup: MODEL_MAP['EU']['fast'] -> ItemFastEU
+MODEL_MAP = {
+    "EU": {"fast": ItemFastEU, "order": ItemOrderEU},
+    "US": {"fast": ItemFastUS, "order": ItemOrderUS},
+    "AS": {"fast": ItemFastAS, "order": ItemOrderAS},
+}
 
 # ==========================================
 # DATABASE 2: Crypto Backend (Users & Invoices)

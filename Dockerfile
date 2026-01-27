@@ -3,7 +3,7 @@ FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies if needed (e.g., for psycopg2 or bcrypt)
+# Install build dependencies if needed (e.g., for psycopg2 or bcrypt
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies into a local folder

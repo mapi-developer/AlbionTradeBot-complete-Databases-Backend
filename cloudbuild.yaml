@@ -131,7 +131,7 @@ substitutions:
   _REPO_NAME: 'app-repo'
   _IMAGE_NAME: 'trade-backend'
   _SERVICE_NAME: 'trade-backend-service'
-  _DB_INSTANCE_CONNECTION_NAME: 'albiontradebot-backend:europe-west1:albion-db-minimal'
+  _DB_INSTANCE_CONNECTION_NAME: 'albion-bot-cheap-v1:europe-west1:albion-db-minimal'
   _DB_USER: 'postgres' 
 
 options:

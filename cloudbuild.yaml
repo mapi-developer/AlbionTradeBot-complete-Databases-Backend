@@ -42,7 +42,7 @@ steps:
   - name: '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/$_IMAGE_NAME:$COMMIT_SHA'
     id: 'reset-db'
     entrypoint: 'bash'
-    secretEnv: ['DB_PASSWORD'] # <--- This uses the secret defined below
+    secretEnv: ['DB_PASSWORD']
     args:
       - '-c'
       - |
